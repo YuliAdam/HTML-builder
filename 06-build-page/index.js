@@ -7,13 +7,13 @@ const newCSS = 'style.css';
 const assetsFolder = 'assets';
 const styleFolder = 'styles';
 let dataArr = [];
+const templateFile = 'template.html';
+const compponentsFolder = 'components';
 
 async function buildPage() {
   await copyAssets();
+  buildHTML();
   copyCSS();
-  const writeHTMLStreem = fs.createWriteStream(
-    path.join(__dirname, newFolder, newHtml),
-  );
 }
 
 function error(err) {
@@ -90,6 +90,38 @@ async function copyCSS() {
       });
     }
   });
+}
+
+async function buildHTML() {
+  try {
+    const initHTMLPath = path.join(__dirname, templateFile);
+    const resultHTMLPath = path.join(__dirname, newFolder, newHtml);
+    const componentsFolderPath = path.join(__dirname, compponentsFolder);
+    await promis.copyFile(initHTMLPath, resultHTMLPath);
+    let template = await promis.readFile(resultHTMLPath, 'utf-8');
+    let templateData = template.toString();
+    const files = await promis.readdir(componentsFolderPath, {
+      withFileTypes: true,
+    });
+    files.forEach(async (file) => {
+      if (
+        file.isFile() &&
+        path.extname(path.join(componentsFolderPath, file.name)) === '.html'
+      ) {
+        const contentData = await promis.readFile(
+          path.join(componentsFolderPath, file.name),
+          'utf-8',
+        );
+        templateData = templateData.replace(
+          `{{${path.basename(file.name, '.html')}}}`,
+          contentData,
+        );
+        await promis.writeFile(resultHTMLPath, templateData);
+      }
+    });
+  } catch (e) {
+    error(e);
+  }
 }
 
 buildPage();
